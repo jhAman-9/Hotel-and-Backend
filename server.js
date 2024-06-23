@@ -40,12 +40,12 @@ app.use(logRequest);
 
 // ROUTING....
 
-app.get("/",localAuthMiddleware, function (req, res) {
+app.get("/", function (req, res) {
   res.send("Welcome to my hotel");
 });
 
 // routing of /person and /menuitem
-app.use("/person", localAuthMiddleware, personRoutes);
+app.use("/person", personRoutes);
 app.use("/menu", menuItemsRoutes);
 
 
