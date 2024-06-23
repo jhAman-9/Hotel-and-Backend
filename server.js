@@ -38,7 +38,7 @@ app.use(logRequest);
 
 
 
-// ROUTING....
+// ROUTING.....
 
 app.get("/", function (req, res) {
   res.send("Welcome to my hotel");
