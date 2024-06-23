@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
+const { jwtAuthMiddleware, generateToken } = require("../jwt.js");
 
 const person = require("../models/person");
 
-router.get("/", async (req, res) => {
+router.get("/", jwtAuthMiddleware, async (req, res) => {
   try {
     const data = await person.find(); // body parser giving data
     console.log("Data Save ", data);
@@ -14,17 +15,71 @@ router.get("/", async (req, res) => {
   }
 });
 
-
-
-router.post("/", async (req, res) => {
+router.post("/signup", async (req, res) => {
   try {
     const data = req.body; // body parser giving data
     const newPerson = new person(data);
     const SavePerson = await newPerson.save();
     console.log("Data Save ", SavePerson);
-    res.status(200).json(SavePerson);
+
+    // define the payload to genereate JWT token
+    const payload = {
+      id: SavePerson.id,
+      email: SavePerson.email,
+      username: SavePerson.username,
+    };
+
+    const token = generateToken(payload);
+    console.log(`Token is : ${token}`);
+
+    res.status(200).json({ SavePerson: SavePerson, token: token });
   } catch (error) {
     console.log("Person Save Error", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Login route
+router.post(`/login`, async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    const user = await person.findOne({ username: username });
+
+    if (!user || !(await user.comparePassword(password))) {
+      return res.status(401).json({ error: "Invalid username or Password" });
+    }
+
+    // create payload with person details to generate token
+    const payload = {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+    };
+
+    // generate token on the basis payload..
+    const token = generateToken(payload);
+
+    // return token as response
+    res.json({ token });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Profile Route
+router.get(`/profile`, jwtAuthMiddleware, async (req, res) => {
+  try {
+    const userData = req.user;
+    console.log("User Data :", userData);
+
+    const userId = userData.id;
+    const user = await person.findById(userId);
+
+    res.status(200).json({ user });
+  } catch (error) {
+    console.log(error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
@@ -92,13 +147,11 @@ router.delete("/:_id", async (req, res) => {
       return res.status(404).json({ error: "Person Data not found to Delete" });
     }
 
-    res.status(200).json( {message : "Person Data Is Deleted Successfully"});
+    res.status(200).json({ message: "Person Data Is Deleted Successfully" });
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-
-
 
 module.exports = router;

@@ -1,0 +1,101 @@
+## JWT Token Auth
+
+### Import JWT
+
+### Write JWT Auth middleware function 
+
+- in which extract Jwt token from it.. Split it on the basis of space and second index of it is token value
+
+- verify this token after attaching it with secret key..
+- Attach user information to the request obj
+
+        // req.user = decoded;
+        req.jwtPayload = decoded;
+
+### Also write the function to generate the JWT token..
+
+        const generateToken = (userData) => {  
+            return jwt.sign(userData, process.env.JWT_SECRET_KEY)
+        }
+
+        - Here Userdata = Payload
+
+### import the function where wnat auth in routes
+
+        const { jwtAuthMiddleware, generateToken } = require("../jwt.js");
+
+
+### use this as auth
+
+        router.get("/", jwtAuthMiddleware, async (req, res) => {
+        try {
+            const data = await person.find(); // body parser giving data
+            console.log("Data Save ", data);
+            res.status(200).json(data);
+        } catch (error) {
+            console.log("Person Save Error", error);
+            res.status(500).json({ error: "Internal Server Error" });
+        }
+        });
+
+
+### Sign Up and Generate Auth Token
+
+        router.post("/signup", async (req, res) => {
+        try {
+            const data = req.body; // body parser giving data
+            const newPerson = new person(data);
+            const SavePerson = await newPerson.save();
+            console.log("Data Save ", SavePerson);
+
+            // define the payload to genereate JWT token
+            const payload = {
+            id: SavePerson.id,
+            email: SavePerson.email,
+            username: SavePerson.username,
+            };
+
+            const token = generateToken(payload);
+            console.log(`Token is : ${token}`);
+
+            res.status(200).json({ SavePerson: SavePerson, token: token });
+        } catch (error) {
+            console.log("Person Save Error", error);
+            res.status(500).json({ error: "Internal Server Error" });
+        }
+        });
+
+
+### Login With Auth Token
+
+        // Login route
+        router.post(`/login`, async (req, res) => {
+        try {
+            const { username, password } = req.body;
+
+            const user = await person.findOne({ username: username });
+
+            if (!user || !(await user.comparePassword(password))) {
+            return res.status(401).json({ error: "Invalid username or Password" });
+            }
+
+            // create payload with person details to generate token
+            const payload = {
+            id: user.id,
+            email: user.email,
+            username: user.username,
+            };
+
+            // generate token on the basis payload..
+            const token = generateToken(payload);
+
+            // return token as response
+            res.json({ token });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ error: "Internal Server Error" });
+        }
+        });
+
+
+    
